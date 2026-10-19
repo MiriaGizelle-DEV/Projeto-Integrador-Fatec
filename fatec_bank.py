@@ -1,19 +1,13 @@
-```python
 # -*- coding: utf-8 -*-
 
-# ==================================================
-# FATEC BANK
-# SISTEMA DE CONTROLE FINANCEIRO MULTIUSUARIO
-# PROJETO INTEGRADOR I - FATEC
-# ==================================================
+# FATEC BANK - PROJETO INTEGRADOR I
 
-
-# 1 - CADASTRO DOS TRES USUARIOS
-# Cada usuario possui nome, senha, saldo inicial,
-# saldo atual e historico de movimentacoes.
+import os
+import csv
 
 usuarios = {
     "1": {
+        "id": "1",
         "nome": "Antonio",
         "senha": "1234",
         "saldo_inicial": 500.00,
@@ -22,6 +16,7 @@ usuarios = {
     },
 
     "2": {
+        "id": "2",
         "nome": "Maria",
         "senha": "2345",
         "saldo_inicial": 800.00,
@@ -30,6 +25,7 @@ usuarios = {
     },
 
     "3": {
+        "id": "3",
         "nome": "Joao",
         "senha": "3456",
         "saldo_inicial": 350.00,
@@ -38,246 +34,190 @@ usuarios = {
     }
 }
 
+def carregarMovimentacoes():
 
-# ==================================================
-# 2 - FUNCAO PARA LER UM VALOR POSITIVO
-# ==================================================
+    if os.path.exists("movimentacoes.csv"):
+
+        with open("movimentacoes.csv", "r", encoding="utf-8-sig") as arquivo:
+
+            leitor = csv.reader(arquivo, delimiter=";")
+
+            next(leitor, None)
+
+            for linha in leitor:
+
+                id_conta = linha[0]
+                operacao = linha[1]
+                valor = float(linha[2])
+                saldo_anterior = float(linha[3])
+                saldo_final = float(linha[4])
+
+                conta = usuarios[id_conta]
+
+                conta["historico"].append(
+                    (operacao, valor, saldo_anterior, saldo_final)
+                )
+
+                conta["saldo"] = saldo_final
+
+def salvarMovimentacao(conta, operacao, valor, saldo_anterior, saldo_final):
+
+    arquivo_novo = not os.path.exists("movimentacoes.csv")
+
+    with open("movimentacoes.csv", "a", encoding="utf-8") as arquivo:
+
+        if arquivo_novo:
+            arquivo.write("conta;operacao;valor;saldo_anterior;saldo_final\n")
+
+        arquivo.write(
+            f"{conta['id']};{operacao};{valor:.2f};{saldo_anterior:.2f};{saldo_final:.2f}\n"
+        )
+
+    conta["saldo"] = saldo_final
+    conta["historico"].append(
+        (operacao, valor, saldo_anterior, saldo_final)
+    )
 
 def lerValor():
     while True:
         try:
-            valor = float(
-                input("Digite o valor (R$): ").replace(",", ".")
-            )
-
-            # O valor deve ser maior que zero.
+            valor = float(input("Digite o valor (R$): ").replace(",", "."))
             if valor > 0:
                 return valor
-            else:
-                print("Digite um valor maior que zero.")
-
+            print("Digite um valor maior que zero.")
         except ValueError:
             print("Valor invalido. Digite um numero.")
 
 
-# ==================================================
-# 3 - PROCESSO PARA REALIZAR DEPOSITO
-# ==================================================
-
 def depositar(conta):
+
     print("\n===== DEPOSITO =====")
 
     valor = lerValor()
 
-    # Guarda o saldo antes do deposito.
-    saldo_anterior = conta["saldo"]
+    if valor > 0:
 
-    # Acrescenta o deposito ao saldo.
-    conta["saldo"] = round(saldo_anterior + valor, 2)
+        saldo_anterior = conta["saldo"]
 
-    # Guarda o saldo depois do deposito.
-    saldo_final = conta["saldo"]
+        saldo_final = round(saldo_anterior + valor, 2)
 
-    # Registra a operacao no historico.
-    # Guarda: tipo, valor, saldo anterior e saldo final.
-    conta["historico"].append(
-        ("Deposito", valor, saldo_anterior, saldo_final)
-    )
+        salvarMovimentacao(
+            conta, "Deposito", valor, saldo_anterior, saldo_final
+        )
 
-    print("\nDeposito realizado com sucesso!")
+        print("\nDeposito realizado com sucesso!")
+        print(f"Saldo anterior: R$ {saldo_anterior:.2f}")
+        print(f"Valor depositado: R$ {valor:.2f}")
+        print(f"Saldo atual: R$ {saldo_final:.2f}")
 
-    print(f"Saldo anterior: R$ {saldo_anterior:.2f}")
-    print(f"Valor depositado: R$ {valor:.2f}")
-    print(f"Saldo atual: R$ {saldo_final:.2f}")
+    else:
+        print("\nValor invalido! Digite um valor maior que zero.")
 
     input("\nPressione ENTER para voltar ao menu...")
 
-
-# ==================================================
-# 4 - PROCESSO PARA REALIZAR SAQUE
-# ==================================================
-
 def sacar(conta):
+
     print("\n===== SAQUE =====")
 
     valor = lerValor()
 
-    # Verifica se existe saldo suficiente.
     if valor <= conta["saldo"]:
 
-        # Guarda o saldo antes do saque.
         saldo_anterior = conta["saldo"]
 
-        # Desconta o valor sacado.
-        conta["saldo"] = round(saldo_anterior - valor, 2)
+        saldo_final = round(saldo_anterior - valor, 2)
 
-        # Guarda o saldo depois do saque.
-        saldo_final = conta["saldo"]
-
-        # Registra o saque no historico.
-        conta["historico"].append(
-            ("Saque", valor, saldo_anterior, saldo_final)
+        salvarMovimentacao(
+            conta, "Saque", valor, saldo_anterior, saldo_final
         )
 
         print("\nSaque realizado com sucesso!")
-
         print(f"Saldo anterior: R$ {saldo_anterior:.2f}")
         print(f"Valor sacado: R$ {valor:.2f}")
         print(f"Saldo atual: R$ {saldo_final:.2f}")
 
     else:
-        # Se nao houver saldo, o saque nao e realizado.
         print("\nSaldo insuficiente!")
         print("Operacao nao realizada.")
 
     input("\nPressione ENTER para voltar ao menu...")
 
-
-# ==================================================
-# 5 - PROCESSO PARA CONSULTAR SALDO
-# ==================================================
-
 def mostrarSaldo(conta):
-    print("\n======================================")
-    print("       FATEC BANK - CONSULTA")
-    print("======================================")
+
+    print("\n===== CONSULTA DE SALDO =====")
 
     print("Usuario:", conta["nome"])
-
-    print("-------------------------------------")
 
     print(f'Saldo atual: R$ {conta["saldo"]:.2f}')
 
-    print("======================================")
-
     input("\nPressione ENTER para voltar ao menu...")
 
-
-# ==================================================
-# 6 - PROCESSO PARA CONSULTAR EXTRATO BANCARIO
-# ==================================================
-
 def mostrarHistorico(conta):
-    print("\n======================================")
-    print("       FATEC BANK - EXTRATO")
-    print("======================================")
 
+    print("\n===== EXTRATO BANCARIO =====")
     print("Usuario:", conta["nome"])
+    print(f'Saldo inicial: R$ {conta["saldo_inicial"]:.2f}')
 
-    print("-------------------------------------")
-
-    # Mostra o saldo inicial da conta.
-    print(
-        f'Saldo inicial: R$ {conta["saldo_inicial"]:.2f}'
-    )
-
-    print("-------------------------------------")
-
-    # Verifica se existem movimentacoes.
     if len(conta["historico"]) == 0:
         print("Nenhuma movimentacao realizada.")
 
     else:
-        # Percorre cada movimentacao do historico.
-        for tipo, valor, saldo_anterior, saldo_final in conta["historico"]:
+        for operacao, valor, saldo_anterior, saldo_final in conta["historico"]:
 
-            print("\nOperacao:", tipo)
+            print("\nOperacao:", operacao)
+            print(f"Saldo anterior: R$ {saldo_anterior:.2f}")
+            print(f"Valor movimentado: R$ {valor:.2f}")
+            print(f"Saldo final: R$ {saldo_final:.2f}")
 
-            print(
-                f"Saldo anterior: R$ {saldo_anterior:.2f}"
-            )
-
-            print(
-                f"Valor movimentado: R$ {valor:.2f}"
-            )
-
-            print(
-                f"Saldo final: R$ {saldo_final:.2f}"
-            )
-
-            print("--------------------------------------")
-
-    # Exibe o saldo atualizado da conta.
-    print(
-        f'\nSaldo atual: R$ {conta["saldo"]:.2f}'
-    )
-
-    print("======================================")
+    print(f'\nSaldo atual: R$ {conta["saldo"]:.2f}')
 
     input("\nPressione ENTER para voltar ao menu...")
 
-
-# ==================================================
-# 7 - FUNCAO PARA REALIZAR LOGIN
-# ==================================================
-
 def fazerLogin():
-    print("\n======================================")
-    print("              FATEC BANK")
-    print("======================================")
-    print("                LOGIN")
-    print("======================================")
 
+    print("\n===== FATEC BANK - LOGIN =====")
     print("1 - Antonio")
     print("2 - Maria")
     print("3 - Joao")
     print("0 - Encerrar programa")
 
-    print("======================================")
+    opcao = input("Escolha o usuario: ")
 
-    opcao = input("Escolha o usuario: ").strip()
-
-    # Verifica se o usuario deseja encerrar.
     if opcao == "0":
         return "SAIR"
 
-    # Verifica se o usuario existe.
     if opcao not in usuarios:
         print("\nUsuario invalido!")
         return None
 
-    # Solicita a senha do usuario selecionado.
-    senha = input("Digite a senha: ").strip()
-
-    # Recupera os dados do usuario.
     conta = usuarios[opcao]
 
-    # Compara a senha digitada com a cadastrada.
+    senha = input("Digite a senha: ")
+
     if senha == conta["senha"]:
+
         print("\nLogin realizado com sucesso!")
         print("Bem-vindo(a),", conta["nome"])
+
         return conta
 
     else:
         print("\nSenha incorreta!")
         return None
 
-
-# ==================================================
-# 8 - PROCESSO DO MENU PRINCIPAL
-# ==================================================
-
 def menuConta(conta):
 
-    # Mantem o menu em funcionamento.
     while True:
-        print("\n======================================")
-        print("              FATEC BANK")
-        print("======================================")
 
+        print("\n===== FATEC BANK =====")
         print("Usuario:", conta["nome"])
-
-        print("--------------------------------------")
-
         print("1 - Depositar")
         print("2 - Sacar")
-        print("3 - Exibir Saldo")
-        print("4 - Exibir Extrato Bancario")
-        print("5 - Sair da Conta")
+        print("3 - Exibir saldo")
+        print("4 - Exibir extrato bancario")
+        print("5 - Sair da conta")
 
-        print("======================================")
-
-        opcao = input("Escolha uma opcao: ").strip()
+        opcao = input("Escolha uma opcao: ")
 
         if opcao == "1":
             depositar(conta)
@@ -293,38 +233,23 @@ def menuConta(conta):
 
         elif opcao == "5":
             print("\nSaindo da conta...")
-
-            # Interrompe o menu e retorna ao login.
             break
 
         else:
             print("\nOpcao invalida!")
 
-
-# ==================================================
-# 9 - PROCESSO PRINCIPAL DO PROGRAMA
-# ==================================================
-
 def executar():
+
     while True:
 
-        # Solicita o login.
         conta = fazerLogin()
 
-        # Encerra o programa.
         if conta == "SAIR":
             print("\nPrograma finalizado.")
             break
 
-        # Se o login estiver correto, abre o menu.
-        elif conta is not None:
+        if conta is not None:
             menuConta(conta)
 
-
-# ==================================================
-# 10 - INICIO DO PROGRAMA
-# ==================================================
-
-# Chama a sub-rotina principal.
+carregarMovimentacoes()
 executar()
-```
